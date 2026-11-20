@@ -50,3 +50,11 @@ sources:
     enabled: true
     stealth_needed: false
     search_url_template: "https://www.medplusmart.com/search?query={query}"
+
+  - name: "Dava India"
+    domain: "davaindia.com"
+    base_url: "https://www.davaindia.com"
+    strategy: "fetch"
+    enabled: true
+    stealth_needed: false
+    search_url_template: "https://www.davaindia.com/search?q={query}"

@@ -49,7 +49,8 @@ export default function Footer() {
             <li><span>Apollo Pharmacy</span></li>
             <li><span>PharmEasy</span></li>
             <li><span>Netmeds</span></li>
-            <li><span>Truemeds</span></li>
+            <li><span>Zeelab Pharmacy</span></li>
+            <li><span>Dava India</span></li>
           </ul>
         </div>
 
