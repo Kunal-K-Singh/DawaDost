@@ -911,6 +911,7 @@
 
   .search-field-query,
   .search-field-pincode,
+  .search-field-quantity,
   .search-field-button {
     width: 100%;
     flex: auto;

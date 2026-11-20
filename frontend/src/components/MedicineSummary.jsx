@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pill, Activity, Layers, Package, Info } from 'lucide-react';
 
-export default function MedicineSummary({ resolved, query, isMock = false }) {
+export default function MedicineSummary({ resolved, query, quantity, isMock = false }) {
   if (!resolved) {
     return (
       <div className="medicine-summary-card card">
@@ -77,6 +77,16 @@ export default function MedicineSummary({ resolved, query, isMock = false }) {
             </div>
             <div className="metric-value">{resolved.form || 'Tablet'}</div>
           </div>
+
+          {quantity && (
+            <div className="summary-metric-item">
+              <div className="metric-label">
+                <Package size={14} className="metric-icon" aria-hidden="true" />
+                <span>Requested Qty</span>
+              </div>
+              <div className="metric-value font-semibold">{quantity} units</div>
+            </div>
+          )}
 
           {resolved.pack_size_units && (
             <div className="summary-metric-item">

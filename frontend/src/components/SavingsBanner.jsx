@@ -114,6 +114,20 @@ export default function SavingsBanner({ savings = {}, referenceListing }) {
               </span>
             </div>
           )}
+
+          {/* Total Savings for Requested Quantity */}
+          {savings?.total_savings_for_quantity_inr !== undefined && savings?.total_savings_for_quantity_inr !== null && savings?.quantity_requested && (
+            <div className="savings-metric-box savings-metric-box-quantity">
+              <span className="metric-box-sub">Total Savings ({savings.quantity_requested} units)</span>
+              <div className="metric-box-price text-success">
+                <span className="currency">₹</span>
+                <span className="val">{Number(savings.total_savings_for_quantity_inr).toFixed(2)}</span>
+              </div>
+              <span className="metric-box-pack">
+                For complete course of {savings.quantity_requested} units
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -19,7 +19,7 @@ import PriceExampleCard from '../components/PriceExampleCard.jsx';
 import SafetyBanner from '../components/SafetyBanner.jsx';
 
 export default function HomePage() {
-  const { performSearch, loading, query, pincode } = useSearch();
+  const { performSearch, loading, query, pincode, quantity } = useSearch();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,8 +35,8 @@ export default function HomePage() {
     }
   }, [location]);
 
-  const handleHeroSearch = async (searchQuery, searchPincode) => {
-    const success = await performSearch(searchQuery, searchPincode);
+  const handleHeroSearch = async (searchQuery, searchPincode, searchQuantity = null) => {
+    const success = await performSearch(searchQuery, searchPincode, searchQuantity);
     if (success) {
       navigate('/search');
     }
@@ -72,6 +72,7 @@ export default function HomePage() {
               <SearchBar
                 initialQuery={query}
                 initialPincode={pincode}
+                initialQuantity={quantity}
                 onSearch={handleHeroSearch}
                 loading={loading}
                 variant="hero"
@@ -84,21 +85,21 @@ export default function HomePage() {
                 <button
                   type="button"
                   className="suggestion-chip"
-                  onClick={() => handleHeroSearch('Augmentin 625 Duo', '110001')}
+                  onClick={() => handleHeroSearch('Augmentin 625 Duo', '110001', null)}
                 >
                   Augmentin 625 Duo
                 </button>
                 <button
                   type="button"
                   className="suggestion-chip"
-                  onClick={() => handleHeroSearch('Dolo 650', '110001')}
+                  onClick={() => handleHeroSearch('Dolo 650', '110001', null)}
                 >
                   Dolo 650
                 </button>
                 <button
                   type="button"
                   className="suggestion-chip"
-                  onClick={() => handleHeroSearch('Pan 40', '110001')}
+                  onClick={() => handleHeroSearch('Pan 40', '110001', null)}
                 >
                   Pan 40
                 </button>

@@ -39,6 +39,7 @@ export default function ResultsPage() {
   const {
     query,
     pincode,
+    quantity,
     searchResponse,
     loading,
     error,
@@ -70,15 +71,15 @@ export default function ResultsPage() {
   }, [searchResponse]);
 
   // Handle new search from Results page search bar
-  const handleResultsSearch = async (newQuery, newPincode) => {
+  const handleResultsSearch = async (newQuery, newPincode, newQuantity = null) => {
     // Reset filters on brand new medicine search
     setFilters(DEFAULT_FILTERS);
-    await performSearch(newQuery, newPincode);
+    await performSearch(newQuery, newPincode, newQuantity);
   };
 
   const handleRetrySearch = () => {
     clearError();
-    performSearch(query, pincode);
+    performSearch(query, pincode, quantity);
   };
 
   const handleFocusSearchInput = () => {
@@ -250,6 +251,7 @@ export default function ResultsPage() {
           <SearchBar
             initialQuery={query}
             initialPincode={pincode}
+            initialQuantity={quantity}
             onSearch={handleResultsSearch}
             loading={loading}
             variant="compact"
@@ -285,6 +287,7 @@ export default function ResultsPage() {
               <MedicineSummary
                 resolved={searchResponse.resolved}
                 query={searchResponse.query || query}
+                quantity={searchResponse.quantity || quantity}
                 isMock={isMock}
               />
             </div>

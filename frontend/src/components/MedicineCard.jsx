@@ -37,6 +37,9 @@ export default function MedicineCard({ item = {}, referenceListing }) {
     is_reference_brand,
     match_confidence,
     savings_vs_ref_unit,
+    cost_for_quantity_inr,
+    packs_needed,
+    quantity_requested,
     flags = []
   } = item;
 
@@ -145,6 +148,21 @@ export default function MedicineCard({ item = {}, referenceListing }) {
             <span className="pack-quantity-note">({pack_size_units} {unitLabel}s)</span>
           )}
         </div>
+
+        {/* Quantity Total Cost & Packs Needed */}
+        {cost_for_quantity_inr !== null && cost_for_quantity_inr !== undefined && quantity_requested && (
+          <div className="card-quantity-cost-row">
+            <span className="qty-cost-label">
+              For {quantity_requested} {unitLabel}s:
+            </span>
+            <span className="qty-cost-val">₹{Number(cost_for_quantity_inr).toFixed(2)}</span>
+            {packs_needed && (
+              <span className="qty-packs-needed">
+                ({packs_needed} {packs_needed === 1 ? 'pack' : 'packs'} needed)
+              </span>
+            )}
+          </div>
+        )}
 
         {/* SAVINGS BADGE */}
         {hasSavings && !is_reference_brand && (

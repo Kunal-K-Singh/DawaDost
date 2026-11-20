@@ -57,7 +57,9 @@ export function normalizeConfidenceCategory(confidence) {
 /**
  * Normalizes backend SearchResponse into frontend UI friendly shape.
  */
-function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
+function normalizeSearchResponse(data, cleanQuery, cleanPincode, cleanQuantity = null) {
+  const rawQty = data.quantity !== undefined ? data.quantity : cleanQuantity;
+  const userQuantity = (rawQty !== null && rawQty !== undefined && Number(rawQty) > 0) ? Number(rawQty) : null;
   const referenceListing = data.reference_listing || null;
   const rawResults = Array.isArray(data.results) ? data.results : [];
 
@@ -72,6 +74,18 @@ function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
       unitSavings = Math.max(0, +(referenceListing.price_per_unit_inr - item.price_per_unit_inr).toFixed(2));
     }
 
+    let costForQty = null;
+    let packsNeeded = null;
+    if (userQuantity !== null) {
+      costForQty = item.cost_for_quantity_inr != null
+        ? item.cost_for_quantity_inr
+        : (item.price_per_unit_inr != null ? +(item.price_per_unit_inr * userQuantity).toFixed(2) : null);
+
+      packsNeeded = item.packs_needed != null
+        ? item.packs_needed
+        : (item.pack_size_units ? Math.ceil(userQuantity / item.pack_size_units) : null);
+    }
+
     return {
       id: item.id || `res-${item.source || 'ph'}-${index}`,
       ...item,
@@ -79,6 +93,9 @@ function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
       match_confidence: normalizeConfidenceCategory(item.match_confidence),
       match_confidence_score: typeof item.match_confidence === 'number' ? item.match_confidence : 1.0,
       savings_vs_ref_unit: unitSavings,
+      cost_for_quantity_inr: costForQty,
+      packs_needed: packsNeeded,
+      quantity_requested: userQuantity,
       flags: Array.isArray(item.flags) ? item.flags : [],
     };
   });
@@ -92,6 +109,13 @@ function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
   const pctSavingsVal = rawSavings.vs_reference_percent != null
     ? rawSavings.vs_reference_percent
     : (referenceListing && referenceListing.price_per_unit_inr ? +((unitSavingsVal / referenceListing.price_per_unit_inr) * 100).toFixed(1) : 0);
+
+  let totalSavingsForQty = null;
+  if (userQuantity !== null) {
+    totalSavingsForQty = rawSavings.total_savings_for_quantity_inr != null
+      ? rawSavings.total_savings_for_quantity_inr
+      : (unitSavingsVal > 0 ? +(unitSavingsVal * userQuantity).toFixed(2) : 0);
+  }
 
   const refPackPrice = referenceListing ? referenceListing.price_inr : null;
   const refUnitPrice = referenceListing ? referenceListing.price_per_unit_inr : null;
@@ -111,6 +135,8 @@ function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
     potential_unit_savings_inr: unitSavingsVal,
     percentage_unit_savings: pctSavingsVal,
     potential_pack_savings_inr: packSavings,
+    quantity_requested: userQuantity,
+    total_savings_for_quantity_inr: totalSavingsForQty,
     pack_savings_note: referenceListing?.pack_size_units
       ? `Savings calculated for standard ${referenceListing.pack_size_units}-unit strip equivalent`
       : 'Unit-level comparison isolates true medicine price irrespective of varying strip packaging.',
@@ -124,16 +150,30 @@ function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
     pack_size_units: referenceListing?.pack_size_units || 10,
   } : null;
 
+  const normalizedRefListing = referenceListing ? {
+    ...referenceListing,
+    salts: formatSalts(referenceListing.salts),
+    match_confidence: normalizeConfidenceCategory(referenceListing.match_confidence),
+    cost_for_quantity_inr: userQuantity !== null
+      ? (referenceListing.cost_for_quantity_inr != null
+          ? referenceListing.cost_for_quantity_inr
+          : (referenceListing.price_per_unit_inr != null ? +(referenceListing.price_per_unit_inr * userQuantity).toFixed(2) : null))
+      : null,
+    packs_needed: userQuantity !== null
+      ? (referenceListing.packs_needed != null
+          ? referenceListing.packs_needed
+          : (referenceListing.pack_size_units ? Math.ceil(userQuantity / referenceListing.pack_size_units) : null))
+      : null,
+    quantity_requested: userQuantity,
+  } : null;
+
   return {
     ...data,
     query: data.query || cleanQuery,
     pincode: data.pincode || cleanPincode,
+    quantity: userQuantity,
     resolved,
-    reference_listing: referenceListing ? {
-      ...referenceListing,
-      salts: formatSalts(referenceListing.salts),
-      match_confidence: normalizeConfidenceCategory(referenceListing.match_confidence),
-    } : null,
+    reference_listing: normalizedRefListing,
     results,
     savings,
     sources: Array.isArray(data.sources) ? data.sources : [],
@@ -148,16 +188,20 @@ function normalizeSearchResponse(data, cleanQuery, cleanPincode) {
  * @param {Object} params
  * @param {string} params.query - Branded medicine name (required)
  * @param {string} params.pincode - 6-digit delivery pincode (required)
+ * @param {number|null} [params.quantity] - Quantity of units required (optional)
  * @param {boolean} [params.forceMock] - Force use of local mock dataset
  * @returns {Promise<Object>} Search response containing resolved medicine, listings, savings, sources
  */
-export async function searchMedicine({ query, pincode = '', forceMock = false }) {
+export async function searchMedicine({ query, pincode = '', quantity = null, forceMock = false }) {
   if (!query || !query.trim()) {
     throw new Error('Medicine name query is required.');
   }
 
   const cleanQuery = query.trim();
   const cleanPincode = (pincode || '').trim();
+  const cleanQuantity = (quantity !== null && quantity !== undefined && Number(quantity) > 0)
+    ? Number(quantity)
+    : null;
 
   if (!cleanPincode) {
     throw new Error('Pincode is mandatory. Please provide a 6-digit pincode.');
@@ -170,9 +214,10 @@ export async function searchMedicine({ query, pincode = '', forceMock = false })
   // If explicitly forced to mock mode
   if (forceMock) {
     await new Promise((resolve) => setTimeout(resolve, 300));
-    const mockData = generateMockResponse(cleanQuery, cleanPincode);
+    const mockData = generateMockResponse(cleanQuery, cleanPincode, cleanQuantity);
+    const normalized = normalizeSearchResponse(mockData, cleanQuery, cleanPincode, cleanQuantity);
     return {
-      ...mockData,
+      ...normalized,
       _dataSource: 'mock',
     };
   }
@@ -183,16 +228,21 @@ export async function searchMedicine({ query, pincode = '', forceMock = false })
     // 30 seconds timeout to accommodate concurrent TinyFish search/fetch
     const timeoutId = setTimeout(() => controller.abort(), 45000);
 
+    const payload = {
+      query: cleanQuery,
+      pincode: cleanPincode,
+    };
+    if (cleanQuantity !== null) {
+      payload.quantity = cleanQuantity;
+    }
+
     const response = await fetch(`${API_BASE_URL}/api/search`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
-      body: JSON.stringify({
-        query: cleanQuery,
-        pincode: cleanPincode,
-      }),
+      body: JSON.stringify(payload),
       signal: controller.signal,
     });
 
@@ -206,7 +256,7 @@ export async function searchMedicine({ query, pincode = '', forceMock = false })
     }
 
     const rawData = await response.json();
-    const normalized = normalizeSearchResponse(rawData, cleanQuery, cleanPincode);
+    const normalized = normalizeSearchResponse(rawData, cleanQuery, cleanPincode, cleanQuantity);
     return {
       ...normalized,
       _dataSource: rawData._cached ? 'cached' : 'live',
@@ -218,9 +268,11 @@ export async function searchMedicine({ query, pincode = '', forceMock = false })
 
     // Fallback to mock data for resilience
     await new Promise((resolve) => setTimeout(resolve, 250));
-    const mockData = generateMockResponse(cleanQuery, cleanPincode);
+    const mockData = generateMockResponse(cleanQuery, cleanPincode, cleanQuantity);
+    const normalized = normalizeSearchResponse(mockData, cleanQuery, cleanPincode, cleanQuantity);
     return {
       ...mockData,
+      ...normalized,
       _dataSource: 'mock_fallback',
       _connectionError: error.message,
     };

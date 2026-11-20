@@ -6,14 +6,15 @@ import { generateMockResponse } from '../data/mockResults.js';
 export function SearchProvider({ children }) {
   const [query, setQuery] = useState('Augmentin 625 Duo');
   const [pincode, setPincode] = useState('110001');
+  const [quantity, setQuantity] = useState('');
   // Initialize synchronously with verified mock dataset for immediate first paint
   const [searchResponse, setSearchResponse] = useState(() =>
-    generateMockResponse('Augmentin 625 Duo', '110001')
+    generateMockResponse('Augmentin 625 Duo', '110001', null)
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const performSearch = async (searchQuery, searchPincode) => {
+  const performSearch = async (searchQuery, searchPincode, searchQuantity = null) => {
     if (!searchQuery || !searchQuery.trim()) {
       setError('Please enter a medicine name.');
       return false;
@@ -29,6 +30,16 @@ export function SearchProvider({ children }) {
       return false;
     }
 
+    let cleanQty = null;
+    if (searchQuantity !== null && searchQuantity !== undefined && searchQuantity !== '') {
+      const parsed = Number(searchQuantity);
+      if (isNaN(parsed) || parsed <= 0 || parsed > 1000) {
+        setError('Quantity must be between 1 and 1000 units.');
+        return false;
+      }
+      cleanQty = parsed;
+    }
+
     const trimmedQuery = searchQuery.trim();
     const trimmedPincode = (searchPincode || '').trim();
 
@@ -36,11 +47,13 @@ export function SearchProvider({ children }) {
     setError(null);
     setQuery(trimmedQuery);
     setPincode(trimmedPincode);
+    setQuantity(cleanQty !== null ? cleanQty : '');
 
     try {
       const response = await searchMedicine({
         query: trimmedQuery,
-        pincode: trimmedPincode
+        pincode: trimmedPincode,
+        quantity: cleanQty,
       });
       setSearchResponse(response);
       return true;
@@ -61,6 +74,8 @@ export function SearchProvider({ children }) {
         setQuery,
         pincode,
         setPincode,
+        quantity,
+        setQuantity,
         searchResponse,
         setSearchResponse,
         loading,

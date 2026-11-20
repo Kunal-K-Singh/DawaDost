@@ -549,14 +549,16 @@ export const MOCK_DATABASE = {
 /**
  * Helper to generate synthetic response for queries not in the explicit presets
  */
-export function generateMockResponse(query, pincode = "") {
+export function generateMockResponse(query, pincode = "", quantity = null) {
   const normalized = (query || "").trim().toLowerCase();
+  const reqQty = (quantity !== null && quantity !== undefined && Number(quantity) > 0) ? Number(quantity) : null;
 
   // If user searched for empty result test keyword
   if (normalized.includes("notfound") || normalized.includes("unknownmed") || normalized.includes("empty")) {
     return {
       query: query,
       pincode: pincode,
+      quantity: reqQty,
       resolved: null,
       reference_listing: null,
       results: [],
@@ -576,6 +578,7 @@ export function generateMockResponse(query, pincode = "") {
     if (normalized.includes(key)) {
       const data = JSON.parse(JSON.stringify(MOCK_DATABASE[key]));
       data.pincode = pincode || "";
+      data.quantity = reqQty;
       return data;
     }
   }
@@ -592,6 +595,7 @@ export function generateMockResponse(query, pincode = "") {
   return {
     query: query || "ExampleBrand 500 mg",
     pincode: pincode || "",
+    quantity: reqQty,
     resolved: {
       product_name: `${cleanName} Tablets`,
       brand: "Standard Pharma Healthcare",

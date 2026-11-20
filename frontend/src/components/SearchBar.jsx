@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Loader2, AlertCircle } from 'lucide-react';
+import { Search, MapPin, Package, Loader2, AlertCircle } from 'lucide-react';
 
 export default function SearchBar({
   initialQuery = '',
   initialPincode = '',
+  initialQuantity = '',
   onSearch,
   loading = false,
   variant = 'hero',
@@ -12,8 +13,10 @@ export default function SearchBar({
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [pincode, setPincode] = useState(initialPincode);
+  const [quantity, setQuantity] = useState(initialQuantity || '');
   const [prevInitialQuery, setPrevInitialQuery] = useState(initialQuery);
   const [prevInitialPincode, setPrevInitialPincode] = useState(initialPincode);
+  const [prevInitialQuantity, setPrevInitialQuantity] = useState(initialQuantity);
   const [validationError, setValidationError] = useState('');
 
   // Synchronize internal inputs when initial props change
@@ -27,18 +30,36 @@ export default function SearchBar({
     setPincode(initialPincode);
   }
 
+  if (initialQuantity !== prevInitialQuantity) {
+    setPrevInitialQuantity(initialQuantity);
+    setQuantity(initialQuantity || '');
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setValidationError('');
 
     const trimmedQuery = query.trim();
     const trimmedPincode = pincode.trim();
+    const trimmedQty = String(quantity ?? '').trim();
+    let parsedQty = null;
 
     if (!trimmedQuery) {
       setValidationError('Please enter a branded medicine name (e.g., Augmentin, Dolo 650, Pan 40).');
       const inputEl = document.getElementById(inputId);
       if (inputEl) inputEl.focus();
       return;
+    }
+
+    if (trimmedQty) {
+      const num = parseInt(trimmedQty, 10);
+      if (isNaN(num) || num <= 0 || num > 1000) {
+        setValidationError('Quantity must be a valid number of units between 1 and 1000.');
+        const qtyEl = document.getElementById(`${inputId}-quantity`);
+        if (qtyEl) qtyEl.focus();
+        return;
+      }
+      parsedQty = num;
     }
 
     if (!trimmedPincode) {
@@ -56,7 +77,7 @@ export default function SearchBar({
     }
 
     if (onSearch) {
-      onSearch(trimmedQuery, trimmedPincode);
+      onSearch(trimmedQuery, trimmedPincode, parsedQty);
     }
   };
 
@@ -90,7 +111,33 @@ export default function SearchBar({
           </div>
         </div>
 
-        {/* Field 2: Pincode (Mandatory 6-digit) */}
+        {/* Field 2: Quantity (Optional, adjacent to Medicine Name) */}
+        <div className="search-field search-field-quantity">
+          <label htmlFor={`${inputId}-quantity`} className="search-label">
+            Quantity <span className="label-optional">(optional)</span>
+          </label>
+          <div className="search-input-inner">
+            <Package size={18} className="search-icon-adornment" aria-hidden="true" />
+            <input
+              id={`${inputId}-quantity`}
+              type="number"
+              min="1"
+              max="1000"
+              step="1"
+              className="search-input"
+              placeholder="e.g. 10 (units)"
+              value={quantity}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, '');
+                setQuantity(val);
+                if (validationError) setValidationError('');
+              }}
+              disabled={loading}
+            />
+          </div>
+        </div>
+
+        {/* Field 3: Pincode (Mandatory 6-digit) */}
         <div className="search-field search-field-pincode">
           <label htmlFor={`${inputId}-pincode`} className="search-label">
             Pincode <span className="label-required" title="Mandatory field">*</span>

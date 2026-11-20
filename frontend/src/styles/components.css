@@ -362,6 +362,11 @@
   min-width: 130px;
 }
 
+.search-field-quantity {
+  flex: 1.1;
+  min-width: 120px;
+}
+
 .search-field-button {
   flex-shrink: 0;
 }
@@ -380,8 +385,10 @@
 }
 
 .label-optional {
+  font-size: 0.725rem;
   font-weight: 400;
   color: var(--color-secondary-text);
+  margin-left: 3px;
 }
 
 .search-input-inner {
@@ -716,6 +723,11 @@
 }
 
 .savings-metric-box-pack {
+  border-color: var(--color-success-border);
+  background-color: #F8FDF9;
+}
+
+.savings-metric-box-quantity {
   border-color: var(--color-success-border);
   background-color: #F8FDF9;
 }
@@ -1337,6 +1349,32 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.card-quantity-cost-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--color-secondary-text);
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.qty-cost-label {
+  font-weight: 500;
+}
+
+.qty-cost-val {
+  font-weight: 700;
+  color: var(--color-main-text);
+}
+
+.qty-packs-needed {
+  font-size: 0.75rem;
+  color: var(--color-muted-text);
 }
 
 .card-freshness-bar {
@@ -2047,6 +2085,15 @@
 [data-theme="dark"] .savings-metric-box-pack {
   background-color: rgba(34, 197, 94, 0.1);
   border-color: var(--color-success-border);
+}
+
+[data-theme="dark"] .savings-metric-box-quantity {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-color: var(--color-success-border);
+}
+
+[data-theme="dark"] .card-quantity-cost-row {
+  border-top-color: var(--color-border);
 }
 
 [data-theme="dark"] .example-card-b {

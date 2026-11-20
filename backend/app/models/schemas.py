@@ -98,6 +98,8 @@ class Listing(BaseModel):
     pack_size_units: float | None = None
     price_inr: float
     price_per_unit_inr: float | None = Field(None, description="Computed in pricing.py, NEVER by LLM")
+    cost_for_quantity_inr: float | None = Field(None, description="Computed total cost for requested quantity")
+    packs_needed: int | None = Field(None, description="Number of packs needed to fulfill requested quantity")
     in_stock: bool | None = None
     delivery_pincode: str | None = Field(None, description="Pincode checked for delivery")
     delivery_info: str | None = Field(None, description="Estimated delivery timeline or status for pincode")
@@ -130,6 +132,8 @@ class SavingsSummary(BaseModel):
     """Computed savings vs searched reference brand."""
     vs_reference_inr_per_unit: float = 0.0
     vs_reference_percent: float = 0.0
+    quantity_requested: float | None = None
+    total_savings_for_quantity_inr: float | None = None
 
 
 class SearchRequest(BaseModel):
@@ -140,12 +144,19 @@ class SearchRequest(BaseModel):
         pattern=r"^[1-9][0-9]{5}$",
         description="Mandatory 6-digit Indian delivery pincode (e.g. 110006)",
     )
+    quantity: float | None = Field(
+        default=None,
+        ge=1,
+        le=1000,
+        description="Requested quantity of medicine units (e.g. 10, 15, 30 tablets)",
+    )
 
 
 class SearchResponse(BaseModel):
     """Response payload for POST /api/search strictly per Section 8."""
     query: str
     pincode: str
+    quantity: float | None = None
     resolved: ResolvedMedicine
     reference_listing: Listing | None = None
     results: list[Listing] = Field(default_factory=list, description="Sorted by price_per_unit_inr ascending")

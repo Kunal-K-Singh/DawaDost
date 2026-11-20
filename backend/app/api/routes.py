@@ -63,6 +63,48 @@ async def search_medicines(req: SearchRequest) -> SearchResponse:
                     s["status"] = "cached"
             if "pincode" not in cached_entry:
                 cached_entry["pincode"] = clean_pincode
+
+            # Calculate quantity metrics on cached entry if quantity is requested
+            req_qty = req.quantity
+            if req_qty and req_qty > 0:
+                import math
+                cached_entry["quantity"] = req_qty
+                if "savings" in cached_entry and cached_entry["savings"]:
+                    cached_entry["savings"]["quantity_requested"] = req_qty
+                    unit_savings = cached_entry["savings"].get("vs_reference_inr_per_unit", 0)
+                    if unit_savings > 0:
+                        cached_entry["savings"]["total_savings_for_quantity_inr"] = round(unit_savings * req_qty, 2)
+
+                if "results" in cached_entry:
+                    for item in cached_entry["results"]:
+                        u_price = item.get("price_per_unit_inr")
+                        if u_price is not None:
+                            item["cost_for_quantity_inr"] = round(u_price * req_qty, 2)
+                        p_size = item.get("pack_size_units")
+                        if p_size and p_size > 0:
+                            item["packs_needed"] = math.ceil(req_qty / p_size)
+
+                if cached_entry.get("reference_listing"):
+                    ref = cached_entry["reference_listing"]
+                    u_price = ref.get("price_per_unit_inr")
+                    if u_price is not None:
+                        ref["cost_for_quantity_inr"] = round(u_price * req_qty, 2)
+                    p_size = ref.get("pack_size_units")
+                    if p_size and p_size > 0:
+                        ref["packs_needed"] = math.ceil(req_qty / p_size)
+            else:
+                cached_entry["quantity"] = None
+                if "savings" in cached_entry and cached_entry["savings"]:
+                    cached_entry["savings"]["quantity_requested"] = None
+                    cached_entry["savings"]["total_savings_for_quantity_inr"] = None
+                if "results" in cached_entry:
+                    for item in cached_entry["results"]:
+                        item["cost_for_quantity_inr"] = None
+                        item["packs_needed"] = None
+                if cached_entry.get("reference_listing"):
+                    cached_entry["reference_listing"]["cost_for_quantity_inr"] = None
+                    cached_entry["reference_listing"]["packs_needed"] = None
+
             return SearchResponse(**cached_entry)
         except Exception as exc:
             logger.warning(f"Failed to parse cached entry, re-fetching: {exc}")
@@ -170,9 +212,30 @@ async def search_medicines(req: SearchRequest) -> SearchResponse:
     cheapest_equiv = next((l for l in sorted_results if not l.is_reference_brand and l.price_per_unit_inr is not None), None)
     savings = compute_savings(reference_listing, cheapest_equiv)
 
+    # 7b. Compute Quantity Metrics if quantity is specified
+    req_qty = req.quantity
+    if req_qty and req_qty > 0:
+        import math
+        savings.quantity_requested = req_qty
+        if savings.vs_reference_inr_per_unit > 0:
+            savings.total_savings_for_quantity_inr = round(savings.vs_reference_inr_per_unit * req_qty, 2)
+
+        for item in sorted_results:
+            if item.price_per_unit_inr is not None:
+                item.cost_for_quantity_inr = round(item.price_per_unit_inr * req_qty, 2)
+            if item.pack_size_units and item.pack_size_units > 0:
+                item.packs_needed = math.ceil(req_qty / item.pack_size_units)
+
+        if reference_listing:
+            if reference_listing.price_per_unit_inr is not None:
+                reference_listing.cost_for_quantity_inr = round(reference_listing.price_per_unit_inr * req_qty, 2)
+            if reference_listing.pack_size_units and reference_listing.pack_size_units > 0:
+                reference_listing.packs_needed = math.ceil(req_qty / reference_listing.pack_size_units)
+
     response = SearchResponse(
         query=clean_query,
         pincode=clean_pincode,
+        quantity=req_qty,
         resolved=resolved,
         reference_listing=reference_listing,
         results=sorted_results,
